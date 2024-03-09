@@ -1,45 +1,177 @@
 const express = require("express");
-const app = express();
-const port = 3000;
-
 const mongoose = require("mongoose");
-mongoose.connect(
-  "mongodb+srv://aakankshasarode005:<andySandy@0099>@webdata.tz7zjei.mongodb.net/?retryWrites=true&w=majority",
-  {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  }
-);
+const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, file.fieldname + "-" + uniqueSuffix);
+  },
+});
 
-const Users = mongoose.model("Users", {
+const upload = multer({ storage: storage });
+var jwt = require("jsonwebtoken");
+const bodyParser = require("body-parser");
+const app = express();
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(cors());
+const port = 4000;
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+// Middleware to parse JSON bodies
+app.use(express.json());
+
+// MongoDB connection
+mongoose
+  .connect("mongodb://127.0.0.1:27017/test")
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Define Mongoose schema
+const userSchema = new mongoose.Schema({
   username: String,
   password: String,
+  likedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
 });
 
-app.get("/", (req, res) => {
-  res.send("hello world !");
+// Define Mongoose model
+const Users = mongoose.model("User", userSchema);
+// for Add-product card
+const Products = mongoose.model("Products", {
+  pname: String,
+  pdesc: String,
+  price: String,
+  category: String,
+  pimage: String,
 });
+// Routes
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+app.post("/like-product", (req, res) => {
+  let productId = req.body.productId;
+  let userId = req.body.userId;
+
+
+  Users.updateOne(
+    { _id: userId },
+    { $addToSet: { likedProducts: productId } }
+  )
+    .then(() => {
+      res.send({ message: "liked sucecss." });
+    })
+    .catch(() => {
+      res.send({ message: "server err." });
+    });
+});
+
+app.post("/add-product", upload.single("pimage"), (req, res) => {
+  console.log(req.body);
+  console.log(req.file.path);
+  const pname = req.body.pname;
+  const pdesc = req.body.pdesc;
+  const price = req.body.price;
+  const category = req.body.category;
+  const pimage = req.file.path;
+  const product = new Products({ pname, pdesc, pimage, price, category });
+
+  product
+    .save()
+    .then(() => {
+      res.send({ message: "saved sucecss." });
+    })
+    .catch(() => {
+      res.send({ message: "server err." });
+    });
+});
+
+app.get("/get-products", (req, res) => {
+  Products.find()
+    .then((result) => {
+      res.send({ message: "success", products: result });
+    })
+    .catch((err) => {
+      res.send({ message: "server err" });
+    });
+});
+
+app.get("/get-product/:id", (req, res) => {
+  console.log(req.params);
+  Products.findOne({_id:req.params.id})
+    .then((result) => {
+      res.send({ message: "success", product : result });
+    })
+    .catch((err) => {
+      res.send({ message: "server err" });
+    });
+});
+app.post("/liked-products", (req, res) => {
+  Users.findOne({_id:req.body.userId}).populate('likedProducts')
+    .then((result) => {
+      res.send({ message: "success", products: result.likedProducts });
+    })
+    .catch((err) => {
+      res.send({ message: "server err" });
+    });
+});
+
 
 app.post("/signup", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
+  const user = new Users({ username: username, password: password });
 
-  if (!username || !password) {
-    return res.status(400).send("Missing username or password");
-  }
-
-  const user = new Users({ username, password }); // Use variables instead of hardcoded values
-  user.save()
+  user
+    .save()
     .then(() => {
-      console.log("User saved");
-      res.send("User signed up successfully");
+      res.send({ message: "saved sucecss." });
     })
-    .catch((error) => {
-      console.error("Error saving user:", error);
-      res.status(500).send("Error signing up user");
+    .catch(() => {
+      res.send({ message: "server err." });
     });
 });
 
+//login page
+
+app.post("/login", (req, res) => {
+  const username = req.body.username;
+  const password = req.body.password;
+  const user = new Users({ username: username, password: password });
+
+  Users.findOne({ username: username })
+    .then((result) => {
+      if (!result) {
+        res.send({ message: "user not found." });
+      } else {
+        if (result.password == password) {
+          const token = jwt.sign(
+            {
+              data: result,
+            },
+            "MYKEY",
+            { expiresIn: "1hr" }
+          );
+          res.send({
+            message: "find sucecss.",
+            token: token,
+            userId: result._id,
+          });
+        }
+        if (result.password != password) {
+          res.send({ message: "password not matched." });
+        }
+      }
+    })
+    .catch(() => {
+      res.send({ message: "server err." });
+    });
+});
+// Start server
 app.listen(port, () => {
-  console.log(`example app listening on port${port}`);
+  console.log(`Example app listening on port ${port}`);
 });
