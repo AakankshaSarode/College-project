@@ -52,6 +52,23 @@ const Products = mongoose.model("Products", {
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
+app.get('/search',(req,res)=>{
+   let search= req.query.search;
+  Products.find({
+  $or :[
+ {pname: {$regex : search}},
+ {pdesc: {$regex : search}},
+ {price: {$regex : search}},
+  ]
+  })
+  .then((result) => {
+    res.send({ message: "success", products: result});
+  })
+  .catch((err) => {
+    res.send({ message: "server err" });
+  });
+});
+
 
 app.post("/like-product", (req, res) => {
   let productId = req.body.productId;
@@ -91,7 +108,9 @@ app.post("/add-product", upload.single("pimage"), (req, res) => {
 });
 
 app.get("/get-products", (req, res) => {
-  Products.find()
+   const catName= req.query.catName;
+    console.log(catName);
+  Products.find({category:catName})
     .then((result) => {
       res.send({ message: "success", products: result });
     })
