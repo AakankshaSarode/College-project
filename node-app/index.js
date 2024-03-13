@@ -108,9 +108,8 @@ app.post("/add-product", upload.single("pimage"), (req, res) => {
 });
 
 app.get("/get-products", (req, res) => {
-   const catName= req.query.catName;
-    console.log(catName);
-  Products.find({category:catName})
+ 
+  Products.find()
     .then((result) => {
       res.send({ message: "success", products: result });
     })
@@ -119,9 +118,9 @@ app.get("/get-products", (req, res) => {
     });
 });
 
-app.get("/get-product/:id", (req, res) => {
+app.get("/get-product/:pId", (req, res) => {
   console.log(req.params);
-  Products.findOne({_id:req.params.id})
+  Products.findOne({_id:req.params.pId})
     .then((result) => {
       res.send({ message: "success", product : result });
     })
