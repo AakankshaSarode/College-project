@@ -34,6 +34,8 @@ mongoose
 // Define Mongoose schema
 const userSchema = new mongoose.Schema({
   username: String,
+  mobile: String,
+  email: String,
   password: String,
   likedProducts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Products" }],
 });
@@ -47,6 +49,8 @@ const Products = mongoose.model("Products", {
   price: String,
   category: String,
   pimage: String,
+  pimage2: String,
+   addedBy: mongoose.Schema.Types.ObjectId
 });
 // Routes
 app.get("/", (req, res) => {
@@ -87,15 +91,18 @@ app.post("/like-product", (req, res) => {
     });
 });
 
-app.post("/add-product", upload.single("pimage"), (req, res) => {
-  console.log(req.body);
-  console.log(req.file.path);
+app.post("/add-product", upload.fields([{name:'pimage'},{name:"pimage2"}]), (req, res) => {
+console.log(req.files);
+console.log(req.body);
+
   const pname = req.body.pname;
   const pdesc = req.body.pdesc;
   const price = req.body.price;
   const category = req.body.category;
-  const pimage = req.file.path;
-  const product = new Products({ pname, pdesc, pimage, price, category });
+  const pimage = req.files.pimage[0].path;
+  const pimage2 = req.files.pimage2[0].path;
+   const  addedBy= req.body.userId;
+  const product = new Products({ pname, pdesc, pimage,pimage2, price, category,addedBy });
 
   product
     .save()
@@ -110,7 +117,11 @@ app.post("/add-product", upload.single("pimage"), (req, res) => {
 app.get("/get-products", (req, res) => {
  const catName= req.query.catName;
   console.log(catName);
-  Products.find({category:catName})
+   let _f={}
+   if(catName){
+    _f={category:catName}
+   }
+Products.find(_f)
     .then((result) => {
       res.send({ message: "success", products: result });
     })
@@ -143,7 +154,9 @@ app.post("/liked-products", (req, res) => {
 app.post("/signup", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
-  const user = new Users({ username: username, password: password });
+  const mobile = req.body.mobile;
+  const email = req.body.email;
+  const user = new Users({ username: username, password: password , mobile:mobile , email:email});
 
   user
     .save()
@@ -155,6 +168,17 @@ app.post("/signup", (req, res) => {
     });
 });
 
+app.get('/get-user/:uId',(req,res)=>{
+   const _userId=req.params.uId;
+  Users.findOne({_id: _userId })
+  .then((result) => {
+    res.send({ message: "sucecss.", user:{email:result.email,username
+    :result.username,mobile:result.mobile}});    {/*user:result*/}  
+  })
+  .catch(() => {
+    res.send({ message: "server err." });
+  });
+})
 //login page
 
 app.post("/login", (req, res) => {
