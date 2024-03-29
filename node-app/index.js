@@ -1,3 +1,4 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -114,19 +115,23 @@ console.log(req.body);
     });
 });
 
+
 app.get("/get-products", (req, res) => {
- const catName= req.query.catName;
+  const catName = req.query.catName;
   console.log(catName);
-   let _f={}
-   if(catName){
-    _f={category:catName}
-   }
-Products.find(_f)
+  
+  let filter = {};
+  
+  if (catName) {
+    filter = { category: catName }; // Construct filter object based on query parameter
+  }
+
+  Products.find(filter)
     .then((result) => {
       res.send({ message: "success", products: result });
     })
     .catch((err) => {
-      res.send({ message: "server err" });
+      res.status(500).send({ message: "server err" }); // Set proper status code for server error
     });
 });
 
