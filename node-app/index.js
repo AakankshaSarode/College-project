@@ -155,7 +155,6 @@ app.post("/liked-products", (req, res) => {
     });
 });
 
-
 app.post("/signup", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
@@ -219,6 +218,8 @@ app.post("/login", (req, res) => {
       res.send({ message: "server err." });
     });
 });
+
+
 // Start server
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
